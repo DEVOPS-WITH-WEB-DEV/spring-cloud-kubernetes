@@ -1,19 +1,20 @@
 @Library('jenkins-shared-library@main') _
+
 pipeline {
 
   agent any
   
   parameters {
-	choice(name: 'action', choices: 'create\nrollback', description: 'Create/rollback of the deployment')
+    choice(name: 'action', choices: 'create\nrollback', description: 'Create/rollback of the deployment')
     string(name: 'ImageName', description: "Name of the docker build", defaultValue: "kubernetes-configmap-reload")
-	string(name: 'ImageTag', description: "Name of the docker build",defaultValue: "v1")
-	string(name: 'AppName', description: "Name of the Application",defaultValue: "kubernetes-configmap-reload")
+    string(name: 'ImageTag', description: "Tag of the docker build",defaultValue: "v1")
+    string(name: 'AppName', description: "Name of the Application",defaultValue: "kubernetes-configmap-reload")
     string(name: 'docker_repo', description: "Name of docker repository",defaultValue: "praveensingam1994")
   }
       
   tools{ 
-        maven 'maven3'
-    }
+    maven 'maven3'
+  }
     stages {
         stage('Git-Checkout') {
             when {
@@ -42,24 +43,16 @@ pipeline {
 			}
 	        steps {
 	            dir("${params.AppName}") {
-	                dockerBuild ( "${params.ImageName}", "${params.docker_repo}" )
+	                dockerBuildAndPush( "${params.ImageName}", "${params.docker_repo}", "${params.ImageTag}" )
 	            }
 	        }
 	    }
-	    stage("Docker-CleanUP") {
+	    stage("Ansible Setup") {
 	        when {
 				expression { params.action == 'create' }
 			}
 	        steps {
-	            dockerCleanup ( "${params.ImageName}", "${params.docker_repo}" )
-			}
-		}
-			    stage("Ansible Setup") {
-	        when {
-				expression { params.action == 'create' }
-			}
-	        steps {
-	            sh 'ansible-playbook ${WORKSPACE}/kubernetes-configmap-reload/server_setup.yml'
+	            sh 'ansible-playbook ${WORKSPACE}/${params.AppName}/server_setup.yml'
 			}
 		}
 	    stage("Create deployment") {
@@ -68,7 +61,7 @@ pipeline {
 			}
 	        steps {
 	            sh 'echo ${WORKSPACE}'
-	            sh 'kubectl create -f ${WORKSPACE}/kubernetes-configmap-reload/kubernetes-configmap.yml'
+	            sh 'kubectl create -f ${WORKSPACE}/${params.AppName}/kubernetes-configmap.yml'
 	        }
 	    }
 	    stage ("wait_for_pods"){
@@ -79,12 +72,14 @@ pipeline {
 	    }
 	    }
 		stage("rollback deployment") {
-	        steps {	            	         	           
+	        when {
+				expression { params.action == 'rollback' }
+			}
+	        steps {
 	              sh """
 	                   kubectl delete deploy ${params.AppName}
-					    kubectl delete svc ${params.AppName}
-				  """	       
-	        }
+					   kubectl delete svc ${params.AppName}
+				   """	        }
 	    }
     }
 }
