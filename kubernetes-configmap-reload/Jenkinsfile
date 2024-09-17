@@ -46,14 +46,14 @@ pipeline {
 	            }
 	        }
 	    }
-	    stage("Docker-CleanUP") {
-	        when {
-				expression { params.action == 'create' }
-			}
-	        steps {
-	            dockerCleanup ( "${params.ImageName}", "${params.docker_repo}" )
-			}
-		}
+	 //    stage("Docker-CleanUP") {
+	 //        when {
+		// 		expression { params.action == 'create' }
+		// 	}
+	 //        steps {
+	 //            dockerCleanup ( "${params.ImageName}", "${params.docker_repo}" )
+		// 	}
+		// }
 			    stage("Ansible Setup") {
 	        when {
 				expression { params.action == 'create' }
