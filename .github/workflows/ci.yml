@@ -20,6 +20,7 @@ jobs:
                 java-version: '25'
                 cache: 'maven'
                 cache-dependency-path: './kubernetes-configmap-reload/pom.xml'
+                
             - run: java --version
 
             - name: clean the project
